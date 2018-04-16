@@ -2,7 +2,7 @@
 - name: Setup reqs for OCP install
   hosts: ocp
   vars:
-    - rhn_user: rhn-gps-mbach
+    - rhn_user: yourredhataccount
     - rhn_password: "YOURRHNPASSHERE"
     - repos:
       - rhel-7-server-rpms
@@ -66,9 +66,7 @@
 
     # yum update
     - name: COMMON | run yum update
-      yum:
-        name: '*'
-        state: latest
+      command: yum update -y
 
     - name: OpenShift | Install docker
       yum:
@@ -97,3 +95,8 @@
         name: docker
         state: started
         enabled: yes
+
+   - name: Install Atomic OpenShift Utils
+     yum:
+       name: atomic-openshift-utils
+       state: latest
