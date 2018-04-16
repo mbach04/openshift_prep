@@ -1,0 +1,99 @@
+---
+- name: Setup reqs for OCP install
+  hosts: ocp
+  vars:
+    - rhn_user: rhn-gps-mbach
+    - rhn_password: "YOURRHNPASSHERE"
+    - repos:
+      - rhel-7-server-rpms
+      - rhel-7-server-extras-rpms
+      - rhel-7-server-ose-3.9-rpms
+      - rhel-7-fast-datapath-rpms
+      - rhel-7-server-ansible-2.4-rpms
+    - packages:
+      - wget
+      - git
+      - net-tools
+      - bind-utils
+      - iptables-services
+      - bridge-utils
+      - bash-completion
+      - kexec-tools
+      - sos
+      - psacct
+  tasks:
+    - name: COMMON | rhn_registration | Register host to the Red Hat Network (RHN)
+      redhat_subscription:
+        state: present
+        username: "{{ rhn_user }}"
+        password: "{{ rhn_password }}"
+        autosubscribe: false
+      register: task_result
+      until: task_result is succeeded
+      retries: 10
+      delay: 5
+
+    # Pull SKU from available subscription pool (Openshift)
+    - name: COMMON | rhn_registration | Search for available OpenShift subscription
+      shell: /usr/bin/subscription-manager list --all --available --matches="*OpenShift Container*" | awk '/Pool ID/ {print $3}' | head -1
+      register: pool_id_openshift
+      ignore_errors: yes
+
+    # Attaching host to Pool ID from above
+    - name: COMMON | rhn_registration | Attach machine to Pool ID (OpenShift)
+      command: /usr/bin/subscription-manager attach --pool={{ pool_id_openshift.stdout }}
+      register: task_result
+      until: task_result.rc == 0
+      retries: 10
+      delay: 1
+      any_errors_fatal: true
+
+    # Disable all repositories
+    - name: COMMON | configure_repos | Disable all repositories (RHN)
+      command: subscription-manager repos --disable="*"
+
+    # Pre-requisite repositories
+    - name: COMMON | configure_repos | Enable the correct repos for OpenShift
+      command: "subscription-manager repos --enable {{ item }}"
+      with_items: "{{ repos }}"
+
+    # Install Pre-req software
+    - name: COMMON | configure packages | Install package deps for OpenShift
+      yum:
+        name: "{{ item }}"
+        state: latest
+      with_items: "{{ packages }}"
+
+    # yum update
+    - name: COMMON | run yum update
+      yum:
+        name: '*'
+        state: latest
+
+    - name: OpenShift | Install docker
+      yum:
+        name: docker-1.13.1
+        state: present
+
+    - name: OpenShift | configure docker storage setup file
+      lineinfile:
+        path: /etc/sysconfig/docker-storage-setup
+        line: "{{ item }}"
+      with_items:
+        - DEVS=/dev/sdb
+        - VG=docker-vg
+
+    - name: OpenShift | remove docker overlay2 line
+      lineinfile:
+        path: /etc/sysconfig/docker-storage-setup
+        line: "STORAGE_DRIVER=overlay2"
+        state: absent
+
+    - name: OpenShift | Run docker storage setup
+      command: docker-storage-setup
+
+    - name: OpenShift | Start and Enable Docker
+      service:
+        name: docker
+        state: started
+        enabled: yes
