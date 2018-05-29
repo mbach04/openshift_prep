@@ -96,7 +96,7 @@
         state: started
         enabled: yes
 
-   - name: Install Atomic OpenShift Utils
-     yum:
-       name: atomic-openshift-utils
-       state: latest
+    - name: Install Atomic OpenShift Utils
+      yum:
+        name: atomic-openshift-utils
+        state: latest
