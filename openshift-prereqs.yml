@@ -7,12 +7,12 @@
     - repos:
       - rhel-7-server-rpms
       - rhel-7-server-extras-rpms
-      - rhel-7-server-ose-3.9-rpms
-      - rhel-7-fast-datapath-rpms
-      - rhel-7-server-ansible-2.4-rpms
+      - rhel-7-server-ose-3.11-rpms
+      - rhel-7-server-ansible-2.6-rpms
     - packages:
       - wget
       - git
+      - tmux
       - net-tools
       - bind-utils
       - iptables-services
@@ -68,24 +68,24 @@
     - name: COMMON | run yum update
       command: yum update -y
 
-    - name: OpenShift | Install docker
-      yum:
-        name: docker-1.13.1
-        state: present
+#    - name: OpenShift | Install docker
+#      yum:
+#        name: docker-1.13.1
+#        state: present
 
-    - name: OpenShift | configure docker storage setup file
-      lineinfile:
-        path: /etc/sysconfig/docker-storage-setup
-        line: "{{ item }}"
-      with_items:
-        - DEVS=/dev/sdb
-        - VG=docker-vg
+#    - name: OpenShift | configure docker storage setup file
+#      lineinfile:
+#        path: /etc/sysconfig/docker-storage-setup
+#        line: "{{ item }}"
+#      with_items:
+#        - DEVS=/dev/sdb
+#        - VG=docker-vg
 
-    - name: OpenShift | remove docker overlay2 line
-      lineinfile:
-        path: /etc/sysconfig/docker-storage-setup
-        line: "STORAGE_DRIVER=overlay2"
-        state: absent
+#    - name: OpenShift | remove docker overlay2 line
+#      lineinfile:
+#        path: /etc/sysconfig/docker-storage-setup
+#        line: "STORAGE_DRIVER=overlay2"
+#        state: absent
 
     - name: OpenShift | Run docker storage setup
       command: docker-storage-setup
